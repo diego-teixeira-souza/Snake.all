@@ -6,10 +6,12 @@
 
 #define true 1
 #define false 0
+#define max_speed 3
+
 typedef int bool;
 
 bool isGameOver, isRuning;
-int snake_x, snake_y, food_x, food_y, tail_length, tail_x[100], tail_y[100], width, height, score;
+int snake_x, snake_y, food_x, food_y, tail_length, tail_x[100], tail_y[100], width, height, score, speed;
 char direction;
 
 bool isTail(const int x, const int y)
@@ -74,6 +76,7 @@ void setup()
     tail_length = 0;
     direction = 'w';
     score = 0;
+    speed = 1;
     food();
     render();
 }
@@ -83,49 +86,59 @@ void logic()
 	{
         char keyPressed = _getch();
         if ((keyPressed == 'w' && direction != 's') || (keyPressed == 'a' &&  direction != 'd')
-        || (keyPressed == 's' && direction != 'w') || (keyPressed == 'd' && direction != 'a'))
+        || (keyPressed == 's' && direction != 'w') || (keyPressed == 'd' && direction != 'a')){
+            if (keyPressed == direction){
+                speed += 1;
+                if (speed > max_speed)
+                    speed = max_speed;
+            }
             direction = keyPressed;
-	}
-    
-    int prevX = snake_x;
-    int prevY = snake_y;
-    switch(direction)
-    {
-        case 'w':
-            snake_y -= 1;
-            break;
-        case 'a':
-            snake_x -= 1;
-            break;
-        case 's':
-            snake_y += 1;
-            break;
-        case 'd':
-            snake_x += 1;
-            break;
-    }
+        }
+	}else
+        speed = 1;
 
     bool isFood = false;
-    if (snake_x == food_x && snake_y == food_y){
-        tail_length += 1;
-        score += 1;
-        isFood = true;
-    } else if (snake_y == 1 || snake_y == height || snake_x == 1 || snake_x == width || isTail(snake_x, snake_y))
-        isGameOver = true;
-
-    int prev_tail_x;
-    int prev_tail_y;
-    for(int t = 0; t < tail_length; t++)
+    for (int i = 0; i < speed; i++)
     {
-        prev_tail_x = tail_x[t];
-        prev_tail_y = tail_y[t];
-        tail_x[t] = prevX;
-        tail_y[t] = prevY;
-        prevX = prev_tail_x;
-        prevY = prev_tail_y;
+        int prevX = snake_x;
+        int prevY = snake_y;
+        switch(direction)
+        {
+            case 'w':
+                snake_y -= 1;
+                break;
+            case 'a':
+                snake_x -= 1;
+                break;
+            case 's':
+                snake_y += 1;
+                break;
+            case 'd':
+                snake_x += 1;
+                break;
+        }
+        
+        if (snake_x == food_x && snake_y == food_y){
+            tail_length += 1;
+            score += 1;
+            isFood = true;
+        } else if (snake_y == 1 || snake_y == height || snake_x == 1 || snake_x == width || isTail(snake_x, snake_y))
+            isGameOver = true;
+
+        int prev_tail_x;
+        int prev_tail_y;
+        for(int t = 0; t < tail_length; t++)
+        {
+            prev_tail_x = tail_x[t];
+            prev_tail_y = tail_y[t];
+            tail_x[t] = prevX;
+            tail_y[t] = prevY;
+            prevX = prev_tail_x;
+            prevY = prev_tail_y;
+        }
     }
 
-    if (isFood)
+    if (isFood == true)
         food();
 }
 void sync()
