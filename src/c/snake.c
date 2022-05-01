@@ -10,7 +10,7 @@
 
 typedef int bool;
 
-bool isGameOver, isRuning;
+bool isGameOver, isRuning, isWallEnabled, isFoodEaten;
 int snake_x, snake_y, food_x, food_y, tail_length, tail_x[100], tail_y[100], width, height, score, speed;
 char direction;
 
@@ -21,15 +21,30 @@ bool isTail(const int x, const int y)
             return true;
     return false;
 }
-void food()
+
+bool isFood(const int x, const int y){
+    return (x == food_x && y == food_y);
+}
+
+bool isLimit(const int x, const int y){
+    return (snake_y == 1 || snake_y == height || snake_x == 1 || snake_x == width);
+}
+
+bool isHead(const int x, const int y){
+    return (y == snake_y && x == snake_x);
+}
+
+void generateFood()
 {
+    food_x = 0;
+    food_y = 0;
     time_t tm;
     srand((unsigned) &tm);
     while(true)
     {
         int x = rand() % width;
         int y = rand() % height;
-        if (!(y == snake_y && x == snake_x) || (y == 1 || y == height || x == 1 || x == width) && !isTail(x, y))
+        if (!isHead(x, y) && !isLimit(x, y) && !isTail(x, y))
         {
             food_x = x;
             food_y = y;
@@ -37,6 +52,7 @@ void food()
         }
     }
 }
+
 void render()
 {
     system("cls");
@@ -45,7 +61,7 @@ void render()
         printf("\n");
         for(int x = 1; x <= width; x++)
         {
-            if (y == 1 || y == height || x == 1 || x == width)
+            if ((y == 1 || y == height || x == 1 || x == width))
                 printf("+");
             else if (y == food_y && x == food_x)
                 printf("F");
@@ -58,36 +74,95 @@ void render()
         }
     }
 
+    printf("\nYou Score: %d", score);
+
     if (isGameOver == true)
     {
-        printf("\nYou score : %d. Press x to exit", score);
+        printf("\nGame Over. Press x to exit.");
         char key;
         while(key != 'x')
             key = _getch();
     }
 }
+
 void setup()
 {
+    isFoodEaten = false;
+    isWallEnabled = false;
     isGameOver = false;
     width = 100;
     height = 30;
     snake_x = width / 2;
     snake_y = height / 2;
     tail_length = 0;
+    for(int t = 0; t < 100; t ++)
+        tail_x[t], tail_y[t] = 0;
     direction = 'w';
     score = 0;
     speed = 1;
-    food();
+    generateFood();
     render();
 }
+
+void doBeyondLimit()
+{
+    if (isWallEnabled){
+        isGameOver = true;
+    } else{
+        if (direction == 'a' || direction == 'd'){
+            if (snake_x == 1)
+                snake_x = width;
+            else    
+                snake_x = 1;
+        }else {
+            if (snake_y == 1)
+                snake_y = height;
+            else
+                snake_y = 1;
+        }
+    }
+}
+
+void doFoodEaten()
+{
+    tail_length += 1;
+    score += 1;
+    isFoodEaten = true;
+    food_x = 0;
+    food_y = 0;
+}
+
+void doTailColision(){
+    isGameOver = true;
+}
+
+void doMoveTail(int prevX, int prevY){
+    int prev_tail_x;
+    int prev_tail_y;
+    for(int t = 0; t < tail_length; t++)
+    {
+        prev_tail_x = tail_x[t];
+        prev_tail_y = tail_y[t];
+        tail_x[t] = prevX;
+        tail_y[t] = prevY;
+        prevX = prev_tail_x;
+        prevY = prev_tail_y;
+    }
+}
+
 void logic()
 {   
     if (_kbhit())
 	{
         char keyPressed = _getch();
         if ((keyPressed == 'w' && direction != 's') || (keyPressed == 'a' &&  direction != 'd')
-        || (keyPressed == 's' && direction != 'w') || (keyPressed == 'd' && direction != 'a')){
-            if (keyPressed == direction){
+        || (keyPressed == 's' && direction != 'w') || (keyPressed == 'd' && direction != 'a'))
+        {
+            if ((direction == 'a' || direction == 'd') && (keyPressed == 'w' || keyPressed == 's')
+            || (direction == 'w' || direction == 's') && (keyPressed == 'a' || keyPressed == 'd'))
+                speed = 1;
+            if (keyPressed == direction)
+            {
                 speed += 1;
                 if (speed > max_speed)
                     speed = max_speed;
@@ -97,7 +172,7 @@ void logic()
 	}else
         speed = 1;
 
-    bool isFood = false;
+    isFoodEaten = false;
     for (int i = 0; i < speed; i++)
     {
         int prevX = snake_x;
@@ -117,34 +192,21 @@ void logic()
                 snake_x += 1;
                 break;
         }
-        
-        if (snake_x == food_x && snake_y == food_y){
-            tail_length += 1;
-            score += 1;
-            isFood = true;
-        } else if (snake_y == 1 || snake_y == height || snake_x == 1 || snake_x == width || isTail(snake_x, snake_y))
-            isGameOver = true;
 
-        int prev_tail_x;
-        int prev_tail_y;
-        for(int t = 0; t < tail_length; t++)
-        {
-            prev_tail_x = tail_x[t];
-            prev_tail_y = tail_y[t];
-            tail_x[t] = prevX;
-            tail_y[t] = prevY;
-            prevX = prev_tail_x;
-            prevY = prev_tail_y;
-        }
+        if (isLimit(snake_x, snake_y)) doBeyondLimit();
+        else if (isFood(snake_x, snake_y)) doFoodEaten();
+        else if (isTail(snake_x, snake_y)) doTailColision();
+        doMoveTail(prevX, prevY);
     }
 
-    if (isFood == true)
-        food();
+    if (isFoodEaten) generateFood();
 }
+
 void sync()
 {
     Sleep(60);
 }
+
 void run()
 {
     setup();
